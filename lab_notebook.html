@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DC Motor Identification — Lab Notebook</title>
+<style>
+  :root{
+    --bg:#11171c;          /* graphite */
+    --panel:#1a232b;
+    --panel2:#212d36;
+    --ink:#e8edf1;
+    --soft:#a7b6c2;
+    --muted:#6f8190;
+    --line:#2c3a45;
+    --amber:#f4a23c;       /* signal accent */
+    --amber-dim:#caa15f;
+    --teal:#5fd0c5;
+    --green:#7cc77c;
+    --red:#e2706b;
+    --paper:#f6f3ec;
+    --paper-ink:#222a30;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    line-height:1.6;font-size:16px;
+  }
+  /* ---- layout ---- */
+  .wrap{display:flex;min-height:100vh}
+  nav{
+    width:248px;flex:0 0 248px;background:var(--panel);border-right:1px solid var(--line);
+    padding:26px 18px;position:sticky;top:0;height:100vh;overflow-y:auto;
+  }
+  .brand{font-family:"Courier New",monospace;font-size:13px;letter-spacing:1px;color:var(--amber);
+    text-transform:uppercase;margin-bottom:4px}
+  .brand b{display:block;font-size:17px;color:var(--ink);letter-spacing:0;text-transform:none;
+    font-family:"Segoe UI",sans-serif;margin-top:6px;line-height:1.3}
+  nav ol{list-style:none;margin:24px 0 0;padding:0;counter-reset:s}
+  nav li{counter-increment:s;margin:2px 0}
+  nav a{display:block;color:var(--soft);text-decoration:none;padding:8px 10px 8px 38px;
+    border-radius:7px;font-size:14.5px;position:relative;transition:.15s}
+  nav a::before{content:counter(s,decimal-leading-zero);position:absolute;left:10px;
+    font-family:"Courier New",monospace;font-size:12px;color:var(--muted)}
+  nav a:hover{background:var(--panel2);color:var(--ink)}
+  nav a.future{color:var(--muted);font-style:italic}
+  nav a.future::after{content:"soon";position:absolute;right:9px;top:9px;font-size:9px;
+    background:var(--line);color:var(--soft);padding:1px 6px;border-radius:20px;font-style:normal}
+  .navnote{margin-top:26px;font-size:11.5px;color:var(--muted);line-height:1.5;border-top:1px solid var(--line);padding-top:16px}
+
+  main{flex:1;max-width:860px;padding:54px 60px 120px;margin:0 auto}
+  header.page h1{font-size:30px;margin:0 0 6px;letter-spacing:-.3px}
+  header.page .sub{color:var(--soft);font-size:15px;margin-bottom:6px}
+  .meta{font-family:"Courier New",monospace;font-size:12px;color:var(--muted);
+    border:1px dashed var(--line);border-radius:8px;padding:10px 14px;margin:22px 0 8px;display:inline-block}
+
+  section{margin-top:54px;scroll-margin-top:24px}
+  .eyebrow{font-family:"Courier New",monospace;font-size:12px;letter-spacing:2px;
+    color:var(--amber);text-transform:uppercase}
+  h2{font-size:23px;margin:6px 0 4px;letter-spacing:-.2px}
+  h3{font-size:17px;margin:30px 0 4px;color:var(--ink)}
+  p{margin:12px 0;color:var(--ink)}
+  .lead{color:var(--soft);font-size:16.5px}
+  strong{color:#fff}
+  em.term{color:var(--amber);font-style:normal;font-weight:600}
+
+  /* analogy / concept cards */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:20px 22px;margin:18px 0}
+  .card.water{border-left:3px solid var(--teal)}
+  .card.warn{border-left:3px solid var(--red);background:#241a1a}
+  .card.key{border-left:3px solid var(--amber);background:#241f17}
+  .card h4{margin:0 0 6px;font-size:15px;color:var(--ink);display:flex;align-items:center;gap:8px}
+  .tag{font-family:"Courier New",monospace;font-size:10.5px;text-transform:uppercase;
+    letter-spacing:1px;padding:2px 8px;border-radius:20px;background:var(--line);color:var(--soft)}
+  .tag.danger{background:#3a1f1f;color:var(--red)}
+  .tag.core{background:#34290f;color:var(--amber)}
+
+  /* the analogy table */
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14.5px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line)}
+  th{color:var(--amber);font-family:"Courier New",monospace;font-size:11.5px;
+    letter-spacing:1px;text-transform:uppercase;font-weight:600}
+  td:first-child{color:var(--soft);width:34%}
+  code{background:#0d1216;border:1px solid var(--line);padding:1px 7px;border-radius:5px;
+    font-family:"Courier New",monospace;font-size:13.5px;color:var(--teal)}
+
+  /* wire legend */
+  .wires{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+  .wire{display:flex;align-items:center;gap:11px;background:var(--panel);border:1px solid var(--line);
+    border-radius:9px;padding:11px 13px;font-size:14px}
+  .dot{width:14px;height:14px;border-radius:50%;flex:0 0 14px}
+  .thick{box-shadow:0 0 0 3px #000 inset}
+
+  /* placeholder for future sections */
+  .placeholder{border:1px dashed var(--line);border-radius:12px;padding:34px;text-align:center;
+    color:var(--muted);background:repeating-linear-gradient(45deg,transparent,transparent 12px,#161d23 12px,#161d23 13px)}
+  .placeholder b{color:var(--soft);display:block;font-size:15px;margin-bottom:6px}
+  .placeholder .pen{font-family:"Courier New",monospace;font-size:12px;margin-top:14px;color:var(--amber-dim)}
+
+  .check{background:var(--panel2);border-radius:12px;padding:18px 22px;margin:22px 0;border:1px solid var(--line)}
+  .check h4{margin:0 0 10px;font-size:14px;color:var(--amber);font-family:"Courier New",monospace;letter-spacing:1px}
+  .check ul{margin:0;padding-left:20px}
+  .check li{margin:7px 0;color:var(--soft);font-size:14.5px}
+
+  footer{margin-top:70px;border-top:1px solid var(--line);padding-top:18px;
+    font-size:12px;color:var(--muted);font-family:"Courier New",monospace}
+
+  @media(max-width:780px){
+    .wrap{flex-direction:column}
+    nav{position:static;width:100%;height:auto;flex-basis:auto;display:flex;flex-wrap:wrap;gap:4px}
+    nav ol{display:flex;flex-wrap:wrap;gap:4px;margin-top:14px;width:100%}
+    nav a{padding:6px 10px 6px 30px}.navnote{display:none}
+    main{padding:32px 22px 80px}
+    .wires{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="brand">Lab Notebook
+      <b>DC Motor System Identification</b>
+    </div>
+    <ol>
+      <li><a href="#intro">Overview</a></li>
+      <li><a href="#parts">The parts I have</a></li>
+      <li><a href="#basics">Electrical basics</a></li>
+      <li><a href="#motor">Motor &amp; driver</a></li>
+      <li><a href="#encoder">The encoder</a></li>
+      <li><a href="#ground">Common ground</a></li>
+      <li><a href="#theory" class="future">Theory: identification</a></li>
+      <li><a href="#protocol" class="future">Experimental protocol</a></li>
+      <li><a href="#results" class="future">Results</a></li>
+    </ol>
+    <div class="navnote">A living document. Basics are written; theory and results get added as the project moves. Everything here is real and my own.</div>
+  </nav>
+
+  <main>
+    <header class="page" id="intro">
+      <div class="eyebrow">Phase 0 · Foundations</div>
+      <h1>Understanding the bench before building it</h1>
+      <p class="sub">A from-scratch explanation of every part and idea behind identifying a DC motor — written for an industrial engineer, not an electronics major.</p>
+      <div class="meta">Othmane Ksir · ENSGSI 1AI · 2025–2026 · status: hardware purchased, build pending</div>
+      <p class="lead">The goal of this project is to take a real DC motor and work out its mathematical model from measured data — its inertia, its friction, its electrical behaviour. Before any of that, I need to genuinely understand what I'm holding. This page is that understanding, built up one idea at a time.</p>
+    </header>
+
+    <!-- ===================== PARTS ===================== -->
+    <section id="parts">
+      <div class="eyebrow">Inventory</div>
+      <h2>The parts I have</h2>
+      <p>Eight things make up the bench. Each maps to one job: power it, drive it, sense it, control it.</p>
+      <table>
+        <tr><th>Part</th><th>In one sentence</th></tr>
+        <tr><td>DC gearmotor + encoder</td><td>The motor that spins, with a sensor on the back that reports how far and which way.</td></tr>
+        <tr><td>Motor driver (VNH5019)</td><td>The "muscle" that takes Arduino's weak commands and switches real power to the motor.</td></tr>
+        <tr><td>Arduino Uno</td><td>The brain — runs my code, commands the driver, reads the encoder.</td></tr>
+        <tr><td>12&nbsp;V power supply</td><td>Turns wall electricity into clean 12&nbsp;V for the motor side only.</td></tr>
+        <tr><td>Breadboard + jumpers</td><td>A solderless board to connect everything temporarily while I experiment.</td></tr>
+        <tr><td>Brackets + hub + base</td><td>Hold the motor still so it doesn't whip around when it spins.</td></tr>
+      </table>
+    </section>
+
+    <!-- ===================== BASICS ===================== -->
+    <section id="basics">
+      <div class="eyebrow">Concept 1</div>
+      <h2>Electrical basics — think of water</h2>
+      <p>Everything else rests on three words. The easiest way in is to picture <strong>water flowing through a pipe</strong >.</p>
+      <div class="card water">
+        <h4>The water analogy <span class="tag">mental model</span></h4>
+        <table style="margin:6px 0 0">
+          <tr><td><em class="term">Voltage</em> (volts, V)</td><td>The <strong>pressure</strong> pushing the electricity. My supply pushes at 12&nbsp;V.</td></tr>
+          <tr><td><em class="term">Current</em> (amps, A)</td><td>The <strong>amount flowing</strong>. The motor "drinks" up to 5.5&nbsp;A when working hard.</td></tr>
+          <tr><td><em class="term">Ground</em> (GND)</td><td>The <strong>reference level</strong>, like sea-level for measuring height. Every voltage is measured relative to it. Remember this — it returns.</td></tr>
+        </table>
+      </div>
+      <p>A motor converts pressure-and-flow into spinning. <strong>More voltage → spins faster. More load fighting it → it draws more current.</strong> That's the whole intuition.</p>
+    </section>
+
+    <!-- ===================== MOTOR + DRIVER ===================== -->
+    <section id="motor">
+      <div class="eyebrow">Concept 2 &amp; 3</div>
+      <h2>The motor, and the muscle it needs</h2>
+      <p>Apply voltage to the motor's two thick wires and it spins. <strong>Swap which wire is + and which is −, and it spins the other way.</strong> Direction is just polarity. Simple.</p>
+      <p>The catch: the Arduino brain is a weakling. It pushes only <em class="term">milliamps</em> (thousandths of an amp); the motor wants whole amps — thousands of times more. Wire the motor straight to the Arduino and you get nothing, or you destroy the Arduino. So a muscle sits in between: the <strong>driver</strong>.</p>
+
+      <h3>The H-bridge — four switches in an "H"</h3>
+      <p>Picture four switches arranged in an <strong>H</strong>, with the motor as the middle bar. Closing different pairs sends current through the motor one way or the other:</p>
+      <table>
+        <tr><th>Switches closed</th><th>Result</th></tr>
+        <tr><td>top-left + bottom-right</td><td>current flows one way → <strong>forward</strong></td></tr>
+        <tr><td>top-right + bottom-left</td><td>current flows the other way → <strong>backward</strong></td></tr>
+      </table>
+      <p>I never touch these switches. The Arduino flips them through two pins called <code>INA</code> and <code>INB</code> — think of them as a little steering wheel: one combination forward, the other reverse. <strong>That's direction control.</strong></p>
+
+      <h3>PWM — controlling speed with a fast on/off flick</h3>
+      <p>How do you run the motor at half speed? Not by halving the voltage (hard to do cleanly) — instead by <strong>flicking the power on and off very fast</strong>, hundreds of times a second. This is <em class="term">PWM</em> (Pulse-Width Modulation):</p>
+      <table>
+        <tr><th>On-time</th><th>Motor feels</th></tr>
+        <tr><td>on 100%</td><td>full speed</td></tr>
+        <tr><td>on 50%, off 50%</td><td>≈ half speed</td></tr>
+        <tr><td>on 20%</td><td>slow</td></tr>
+      </table>
+      <p>The motor can't react to each flick — it feels the <strong>average</strong>. Like tapping a gas pedal lightly and often to cruise slowly. The on-fraction is the <em class="term">duty cycle</em>, set on the Arduino as a number <code>0–255</code> (0 = off, 255 = full, 128 ≈ half). It comes out of a special pin marked <code>~</code>.</p>
+      <div class="card key">
+        <h4>The full control picture <span class="tag core">remember</span></h4>
+        <p style="margin:4px 0 0"><code>INA</code> / <code>INB</code> set <strong>direction</strong> · <code>PWM</code> sets <strong>speed</strong>. Three wires from Arduino to driver and I command the motor completely.</p>
+      </div>
+    </section>
+
+    <!-- ===================== ENCODER ===================== -->
+    <section id="encoder">
+      <div class="eyebrow">Concept 4 · the heart of the project</div>
+      <h2>The encoder — the eyes</h2>
+      <p>The motor spins, but it doesn't tell me how fast or how far. The <strong>encoder</strong> does. It's a sensor on the back of the shaft that turns spinning into <strong>countable pulses</strong>.</p>
+      <p>Picture a disc on the shaft with tiny marks, and a sensor that goes <em class="term">"tick!"</em> each time a mark passes. Count ticks → how far it turned. Count ticks per second → how fast. That's the core idea.</p>
+
+      <h3>Two channels = direction <em>and</em> distance</h3>
+      <p>There are actually <strong>two</strong> sensors, set slightly apart — <em class="term">channel&nbsp;A</em> and <em class="term">channel&nbsp;B</em>. Both tick as the shaft turns, but one always ticks just before the other:</p>
+      <table>
+        <tr><th>Which ticks first</th><th>Means</th></tr>
+        <tr><td>A before B</td><td>turning <strong>forward</strong></td></tr>
+        <tr><td>B before A</td><td>turning <strong>backward</strong></td></tr>
+      </table>
+      <p>Together they give <strong>both how far and which way</strong>. (The fancy word is "quadrature" — but the idea is just: two offset sensors.)</p>
+
+      <h3>The six wires</h3>
+      <div class="wires">
+        <div class="wire"><span class="dot thick" style="background:#c33"></span><div><strong>Motor +</strong> — thick, takes 12&nbsp;V</div></div>
+        <div class="wire"><span class="dot thick" style="background:#444"></span><div><strong>Motor −</strong> — thick, takes 12&nbsp;V</div></div>
+        <div class="wire"><span class="dot" style="background:#e0b03a"></span><div><strong>Encoder Vcc</strong> — thin, 5&nbsp;V from Arduino</div></div>
+        <div class="wire"><span class="dot" style="background:#888"></span><div><strong>Encoder GND</strong> — thin</div></div>
+        <div class="wire"><span class="dot" style="background:#5fd0c5"></span><div><strong>Channel A</strong> — thin, signal</div></div>
+        <div class="wire"><span class="dot" style="background:#7c9ad0"></span><div><strong>Channel B</strong> — thin, signal</div></div>
+      </div>
+      <div class="card warn">
+        <h4>Handling rule that prevents the worst mistake <span class="tag danger">danger</span></h4>
+        <p style="margin:4px 0 0">Thick wires = 12&nbsp;V brawn. Thin wires = delicate 5&nbsp;V signals. <strong>Never put 12&nbsp;V on the thin encoder wires</strong> — it destroys the encoder instantly. The encoder's power comes from the Arduino's 5&nbsp;V, never from the supply.</p>
+      </div>
+    </section>
+
+    <!-- ===================== GROUND ===================== -->
+    <section id="ground">
+      <div class="eyebrow">Concept 5 · the thing beginners forget</div>
+      <h2>Common ground — everyone agrees on sea level</h2>
+      <p>Recall: ground is the reference "sea level." I have <strong>two</strong> power sources — the 12&nbsp;V supply (motor) and the USB/Arduino (5&nbsp;V brain). Each has its own ground.</p>
+      <p>Problem: when the Arduino sends a signal to the driver, that signal is a voltage — but measured <em>against what?</em> Against ground. If the two grounds sit at different "sea levels," the driver can't read the Arduino correctly. It's two people describing a height while disagreeing on where the floor is.</p>
+      <div class="card key">
+        <h4>The fix <span class="tag core">burn this in</span></h4>
+        <p style="margin:4px 0 0">Connect <strong>all grounds together</strong> with a wire. Now everyone agrees on sea level and signals make sense. Skip this single wire and <strong>nothing works</strong> — and you won't know why.</p>
+      </div>
+
+      <div class="check">
+        <h4>// quick self-check</h4>
+        <ul>
+          <li>Which wires carry 12&nbsp;V, and which must <em>never</em> see it?</li>
+          <li>What two pins set direction, and what sets speed?</li>
+          <li>Why do the two encoder channels need to be offset?</li>
+          <li>What happens if I forget to tie the grounds together?</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===================== THEORY (future) ===================== -->
+    <section id="theory">
+      <div class="eyebrow">Concept 6 · coming next</div>
+      <h2>Theory: system identification</h2>
+      <div class="placeholder">
+        <b>This section gets written next.</b>
+        It will cover: the state-space model of the motor, the six physical parameters (J, B, Kt, Ke, R, L), why we identify input→velocity first (the integrator trap), and the square-wave excitation method.
+        <div class="pen">▸ to add after the basics are solid</div>
+      </div>
+    </section>
+
+    <!-- ===================== PROTOCOL (future) ===================== -->
+    <section id="protocol">
+      <div class="eyebrow">Phase 1 · coming next</div>
+      <h2>Experimental protocol</h2>
+      <div class="placeholder">
+        <b>Filled in once the bench is wired.</b>
+        Wiring diagram, the first "spin + count" test, the excitation signal, sampling rate, and exactly how each measurement is taken and logged.
+        <div class="pen">▸ to add when parts arrive</div>
+      </div>
+    </section>
+
+    <!-- ===================== RESULTS (future) ===================== -->
+    <section id="results">
+      <div class="eyebrow">Phase 1 · coming next</div>
+      <h2>Results</h2>
+      <div class="placeholder">
+        <b>Real measured data goes here.</b>
+        Raw response curves, the identified parameter values, how well the model matches the motor, and the gaps and limits I find. Negative results stay too — they count.
+        <div class="pen">▸ the part that turns this into a real project</div>
+      </div>
+    </section>
+
+    <footer>
+      DC Motor System Identification · living lab notebook · last updated: foundations · Othmane Ksir
+    </footer>
+  </main>
+</div>
+</body>
+</html>
